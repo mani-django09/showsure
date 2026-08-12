@@ -45,7 +45,7 @@ const FAQS = [
   { q: 'Do my clients need to download an app?', a: 'No. Your booking page is a simple link that works in any browser — perfect for your Instagram bio, Google Business profile, or a QR code at the front desk. Clients book in under a minute, no account required.' },
   { q: 'How is ShowSure different from Fresha or Vagaro?', a: 'ShowSure does one thing extremely well — protecting your calendar from no-shows — without the bloat or the commission. Fresha is free but takes a cut of your new clients; Vagaro is a heavy all-in-one suite. ShowSure is a flat monthly price, zero commission, deposits in your own account, and set up in 10 minutes.' },
   { q: 'How do I stop no-shows at my salon?', a: 'The two things that cut no-shows the most are (1) a required card deposit that gives clients skin in the game, and (2) timely SMS reminders 24 and 2 hours before. ShowSure automates both, which is why salons typically see no-shows drop by more than half.' },
-  { q: 'Can I try it before paying?', a: 'Yes — 14 days free, no card required. Set up your booking page, take real bookings, and see the difference. If it doesn\'t stop no-shows, walk away.' },
+  { q: 'Can I cancel anytime?', a: 'Yes. There\'s no lock-in contract — cancel your subscription whenever you want and you\'ll keep access until the end of your current billing period.' },
 ];
 
 const COMPARE = [
@@ -72,7 +72,7 @@ export default function Home() {
     <>
       <Head>
         <title>ShowSure — Salon Booking Software That Stops No-Shows</title>
-        <meta name="description" content="Booking software for salons and beauty pros with card deposits, automatic no-show charges and SMS reminders. Flat price, zero commission. 14-day free trial." />
+        <meta name="description" content="Booking software for salons and beauty pros with card deposits, automatic no-show charges and SMS reminders. Flat price, zero commission, cancel anytime." />
         <meta name="keywords" content="salon booking software, stop no-shows, no-show fee, salon deposit, appointment reminders, nail tech booking app, lash artist booking, barber booking software, Fresha alternative, Vagaro alternative" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="canonical" href="https://frontend-swart-pi-29.vercel.app/" />
@@ -165,7 +165,7 @@ export default function Home() {
           </p>
 
           <div className="row" style={{ justifyContent: 'center', marginTop: 20 }}>
-            <Link href="/signup" className="btn btn-lg">Start free — 14 days</Link>
+            <Link href="/signup" className="btn btn-lg">Get started</Link>
             <a href="#how" className="btn btn-secondary btn-lg">How it works</a>
           </div>
         </div>
@@ -373,11 +373,11 @@ export default function Home() {
               <div className="price">${p.price}<span className="muted">/mo</span></div>
               <p className="muted" style={{ marginBottom: 12 }}>{p.tagline}</p>
               <ul className="plan-list">{p.features.map((f) => <li key={f}>✓ {f}</li>)}</ul>
-              <Link href="/signup" className={`btn ${p.featured ? '' : 'btn-secondary'}`} style={{ width: '100%', textAlign: 'center' }}>Start free trial</Link>
+              <Link href="/signup" className={`btn ${p.featured ? '' : 'btn-secondary'}`} style={{ width: '100%', textAlign: 'center' }}>Choose {p.name}</Link>
             </div>
           ))}
         </div>
-        <p className="muted" style={{ textAlign: 'center', marginTop: 12 }}>All plans: 14-day free trial · unlimited bookings · zero commission · cancel anytime</p>
+        <p className="muted" style={{ textAlign: 'center', marginTop: 12 }}>All plans: unlimited bookings · zero commission · cancel anytime</p>
       </section>
 
       {/* FAQ */}
@@ -395,7 +395,7 @@ export default function Home() {
       <section className="container" style={{ textAlign: 'center', padding: '40px 16px 60px' }}>
         <h2 className="section-title" style={{ marginBottom: 8 }}>Your next no-show doesn&apos;t have to cost you.</h2>
         <p className="muted" style={{ marginBottom: 20 }}>Set up tonight. Protected by tomorrow&apos;s first appointment.</p>
-        <Link href="/signup" className="btn btn-lg">Start free — 14 days</Link>
+        <Link href="/signup" className="btn btn-lg">Get started</Link>
       </section>
 
       <Footer />

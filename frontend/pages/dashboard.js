@@ -339,7 +339,7 @@ export default function Dashboard() {
             <div className="card">
               <div className="row spread">
                 <div>
-                  <h2 style={{ marginBottom: 4 }}>Current plan: {billing.plan === 'trial' ? 'Free trial' : (PLAN_LABEL[billing.plan] || billing.plan)}</h2>
+                  <h2 style={{ marginBottom: 4 }}>Current plan: {billing.plan === 'none' ? 'No active plan' : billing.plan === 'trial' ? 'Free trial' : (PLAN_LABEL[billing.plan] || billing.plan)}</h2>
                   <p className="muted">
                     Status: <b>{billing.subscription_status}</b>
                     {billing.subscription_status === 'trialing' && ` · ${billing.trial_days_left} days left`}

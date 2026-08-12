@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS businesses (
   timezone TEXT DEFAULT 'America/New_York',
   deposit_cents INTEGER DEFAULT 2000,        -- default $20 deposit
   google_review_url TEXT DEFAULT '',
-  plan TEXT DEFAULT 'trial',                 -- trial | starter | pro | growth
+  plan TEXT DEFAULT 'none',                  -- none | starter | pro | growth
   square_connected INTEGER DEFAULT 0,        -- 1 after Square OAuth
   created_at TEXT DEFAULT (datetime('now'))
 );
@@ -88,15 +88,10 @@ addColumn('businesses', "square_merchant_id TEXT DEFAULT ''");
 addColumn('businesses', "square_location_id TEXT DEFAULT ''");
 // Billing — salon's subscription to ShowSure (via Lemon Squeezy, Merchant of Record)
 addColumn('businesses', "trial_ends_at TEXT DEFAULT ''");
-addColumn('businesses', "subscription_status TEXT DEFAULT 'trialing'"); // trialing|active|on_trial|past_due|cancelled|expired
+addColumn('businesses', "subscription_status TEXT DEFAULT 'inactive'"); // inactive|active|past_due|cancelled|expired
 addColumn('businesses', "ls_subscription_id TEXT DEFAULT ''");
 addColumn('businesses', "ls_customer_id TEXT DEFAULT ''");
 addColumn('businesses', "current_period_end TEXT DEFAULT ''");
-// Backfill existing rows so they keep a valid 14-day trial window
-try {
-  db.prepare("UPDATE businesses SET trial_ends_at = ? WHERE trial_ends_at IS NULL OR trial_ends_at = ''")
-    .run(new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString());
-} catch {}
 
 // Seed default hours (Tue-Sat 9:00-18:00) for a new business
 function seedDefaultHours(businessId) {

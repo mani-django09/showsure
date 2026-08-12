@@ -5,7 +5,7 @@ import Footer from '../components/Footer';
 import Icon from '../components/Icon';
 
 const STEPS = [
-  { icon: 'clock', title: '1. Set up in 10 minutes', body: 'Add your services, staff, working hours and the deposit amount you want to protect each slot (most studios pick $10–$50). No technical setup, no card required to start your 14-day trial.' },
+  { icon: 'clock', title: '1. Set up in 10 minutes', body: 'Add your services, staff, working hours and the deposit amount you want to protect each slot (most studios pick $10–$50). No technical setup required, and no card needed to create your account.' },
   { icon: 'link', title: '2. Share your booking link', body: 'You get a clean booking page at a link you can drop into your Instagram bio, Google Business profile, or a QR code at the front desk. Clients book themselves, 24/7 — no more back-and-forth DMs.' },
   { icon: 'lock', title: '3. Clients book with a card hold', body: 'When a client books, we place a hold on their card through your own Square account. Nothing is charged yet — it is a hold, not a payment. Your deposit policy is shown clearly before they confirm.' },
   { icon: 'bell', title: '4. Automatic reminders go out', body: 'A confirmation text is sent instantly, then reminders 24 hours and 2 hours before the appointment. Each includes a one-tap cancel link, so if someone truly can’t make it, the slot frees up in time to rebook.' },
@@ -52,8 +52,8 @@ export default function HowItWorks() {
             </div>
           ))}
           <div style={{ textAlign: 'center', margin: '28px 0 8px' }}>
-            <Link href="/signup" className="btn btn-lg">Start free — 14 days</Link>
-            <p className="muted" style={{ marginTop: 8 }}>No card required · Cancel anytime</p>
+            <Link href="/signup" className="btn btn-lg">Get started</Link>
+            <p className="muted" style={{ marginTop: 8 }}>No card required to sign up · Cancel anytime</p>
           </div>
         </div>
       </div>

@@ -46,13 +46,14 @@ export default function Terms() {
 
           <h2><span className="n">3.</span>Subscriptions &amp; billing</h2>
           <ul>
-            <li>New accounts include a 14-day free trial. No card is required to start.</li>
+            <li>Creating an account is free and does not require a card. Online bookings on your
+              page are enabled once you subscribe to a paid plan.</li>
             <li>Paid plans are billed monthly through our payment provider, Lemon Squeezy, which acts
               as the merchant of record for your subscription.</li>
             <li>You can cancel anytime; access continues until the end of the current billing period.
               Fees already paid are non-refundable except where required by law.</li>
-            <li>If your trial ends or a subscription lapses, online bookings for your page are paused
-              until you subscribe.</li>
+            <li>If a subscription lapses, online bookings for your page are paused until you
+              subscribe again.</li>
           </ul>
 
           <h2><span className="n">4.</span>Deposits &amp; customer payments</h2>

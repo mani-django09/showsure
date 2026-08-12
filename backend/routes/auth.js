@@ -39,13 +39,12 @@ router.post('/signup', authLimiter, async (req, res) => {
   while (db.prepare('SELECT id FROM businesses WHERE slug = ?').get(n === 1 ? slug : `${slug}-${n}`)) n++;
   if (n > 1) slug = `${slug}-${n}`;
 
+  // No free trial: the account is created immediately (free), but the public
+  // booking page stays "not accepting" until the salon subscribes to a plan.
   const hash = await bcrypt.hash(password, 10);
-  const trialEnds = new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString();
   const info = db
-    .prepare(
-      'INSERT INTO businesses (name, slug, email, password_hash, trial_ends_at, subscription_status) VALUES (?, ?, ?, ?, ?, ?)'
-    )
-    .run(name, slug, email.toLowerCase(), hash, trialEnds, 'trialing');
+    .prepare('INSERT INTO businesses (name, slug, email, password_hash, subscription_status, plan) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(name, slug, email.toLowerCase(), hash, 'inactive', 'none');
   seedDefaultHours(info.lastInsertRowid);
 
   const token = jwt.sign({ id: info.lastInsertRowid }, JWT_SECRET, { expiresIn: '30d' });

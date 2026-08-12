@@ -21,7 +21,7 @@ export default function Footer() {
             <h4>Company</h4>
             <Link href="/about">About</Link>
             <Link href="/contact">Contact</Link>
-            <Link href="/signup">Start free trial</Link>
+            <Link href="/signup">Get started</Link>
           </div>
           <div className="sf-col">
             <h4>Legal</h4>

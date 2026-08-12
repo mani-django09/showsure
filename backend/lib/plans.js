@@ -1,5 +1,8 @@
 // Plan config + access rules. The salon's subscription to ShowSure.
+// No free trial: new accounts start on 'none' (setup allowed, booking gated)
+// until they subscribe. 'trial' is kept only for legacy pre-existing accounts.
 const PLANS = {
+  none:    { label: 'No plan', staff: 1, price: 0 },
   trial:   { label: 'Free trial', staff: Infinity, price: 0 },
   starter: { label: 'Starter', staff: 1, price: 29, variantEnv: 'LS_VARIANT_STARTER' },
   pro:     { label: 'Pro', staff: 5, price: 59, variantEnv: 'LS_VARIANT_PRO' },

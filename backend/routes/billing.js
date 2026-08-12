@@ -13,13 +13,13 @@ router.get('/billing/status', requireAuth, (req, res) => {
   const b = req.business;
   res.json({
     plan: b.plan,
-    subscription_status: b.subscription_status || 'trialing',
+    subscription_status: b.subscription_status || 'inactive',
     active: isActive(b),
     trial_days_left: trialDaysLeft(b),
     current_period_end: b.current_period_end || '',
     configured: ls.isConfigured(),
     plans: Object.entries(PLANS)
-      .filter(([k]) => k !== 'trial')
+      .filter(([k]) => k !== 'trial' && k !== 'none')
       .map(([key, v]) => ({ key, label: v.label, price: v.price, staff: v.staff === Infinity ? 'Unlimited' : v.staff })),
   });
 });

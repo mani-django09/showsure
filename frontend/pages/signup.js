@@ -29,12 +29,12 @@ export default function Signup() {
   return (
     <div className="auth-wrap">
       <Head>
-        <title>Start your free trial — ShowSure</title>
-        <meta name="description" content="Create your ShowSure account — booking page with card deposits, SMS reminders and automatic no-show protection. 14-day free trial, no card required." />
+        <title>Create your account — ShowSure</title>
+        <meta name="description" content="Create your ShowSure account — booking page with card deposits, SMS reminders and automatic no-show protection. No card required to sign up." />
         <link rel="canonical" href="https://frontend-swart-pi-29.vercel.app/signup" />
         <meta property="og:type" content="website" />
-        <meta property="og:title" content="Start your free trial — ShowSure" />
-        <meta property="og:description" content="Booking page with card deposits, SMS reminders and no-show protection. 14-day free trial, no card required." />
+        <meta property="og:title" content="Create your account — ShowSure" />
+        <meta property="og:description" content="Booking page with card deposits, SMS reminders and no-show protection. No card required to sign up." />
         <meta property="og:url" content="https://frontend-swart-pi-29.vercel.app/signup" />
         <meta property="og:image" content="https://frontend-swart-pi-29.vercel.app/api/og" />
         <meta property="og:image:width" content="1200" />
@@ -45,7 +45,7 @@ export default function Signup() {
       <div className="auth-card">
         <Link href="/" className="auth-brand"><span className="mark"><Icon name="shield" size={15} /></span> ShowSure</Link>
         <h1>Start protecting your calendar</h1>
-        <p className="muted" style={{ marginBottom: 18 }}>14-day free trial · no card required.</p>
+        <p className="muted" style={{ marginBottom: 18 }}>No card required to sign up · set up in 10 minutes.</p>
         {error && <div className="error">{error}</div>}
         <form onSubmit={submit}>
           <input

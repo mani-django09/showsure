@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /cancel/
+
+Sitemap: https://frontend-swart-pi-29.vercel.app/sitemap.xml

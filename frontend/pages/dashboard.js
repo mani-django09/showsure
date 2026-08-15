@@ -309,7 +309,10 @@ export default function Dashboard() {
             ) : (
               <table>
                 <thead>
-                  <tr><th>Client</th><th>Phone</th><th>Visits</th><th>No-shows</th><th>Last visit</th></tr>
+                  <tr>
+                    <th>Client</th><th>Phone</th><th>Visits</th><th>No-shows</th>
+                    <th>Total spent</th><th>Last service</th><th>Last visit</th><th>Next visit</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {clients.map((c) => (
@@ -321,7 +324,14 @@ export default function Dashboard() {
                       <td className="muted">{c.phone}</td>
                       <td>{c.completed}/{c.total_bookings}</td>
                       <td>{c.no_shows}</td>
-                      <td className="muted">{c.last_visit}</td>
+                      <td>{fmtMoney(c.total_spent_cents || 0)}</td>
+                      <td className="muted">{c.last_service || '—'}</td>
+                      <td className="muted">{c.last_visit || '—'}</td>
+                      <td>
+                        {c.next_visit
+                          ? <span className="badge confirmed">{c.next_visit}</span>
+                          : <span className="muted">—</span>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -169,21 +169,30 @@ router.get('/bookings/range', requireAuth, (req, res) => {
 
 // GET /api/clients — CRM: every client with visit history, aggregated from bookings
 router.get('/clients', requireAuth, (req, res) => {
+  const today = safeNowInTz(req.business.timezone).date;
   const rows = db
     .prepare(
-      `SELECT customer_phone AS phone,
-              MAX(customer_name) AS name,
+      `SELECT bk.customer_phone AS phone,
+              MAX(bk.customer_name) AS name,
               COUNT(*) AS total_bookings,
-              SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
-              SUM(CASE WHEN status = 'no_show' THEN 1 ELSE 0 END) AS no_shows,
-              SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled,
-              MAX(date) AS last_visit
-       FROM bookings
-       WHERE business_id = ?
-       GROUP BY customer_phone
-       ORDER BY last_visit DESC`
+              SUM(CASE WHEN bk.status = 'completed' THEN 1 ELSE 0 END) AS completed,
+              SUM(CASE WHEN bk.status = 'no_show' THEN 1 ELSE 0 END) AS no_shows,
+              SUM(CASE WHEN bk.status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled,
+              MAX(CASE WHEN bk.status = 'completed' THEN bk.date END) AS last_visit,
+              MIN(CASE WHEN bk.status = 'confirmed' AND bk.date >= ? THEN bk.date END) AS next_visit,
+              COALESCE(SUM(CASE WHEN bk.status = 'completed' THEN s.price_cents ELSE 0 END), 0) AS total_spent_cents,
+              (SELECT s2.name FROM bookings bk2
+                 JOIN services s2 ON s2.id = bk2.service_id
+                WHERE bk2.customer_phone = bk.customer_phone AND bk2.business_id = bk.business_id
+                  AND bk2.status = 'completed'
+                ORDER BY bk2.date DESC LIMIT 1) AS last_service
+       FROM bookings bk
+       JOIN services s ON s.id = bk.service_id
+       WHERE bk.business_id = ?
+       GROUP BY bk.customer_phone
+       ORDER BY (last_visit IS NULL), last_visit DESC`
     )
-    .all(req.business.id);
+    .all(today, req.business.id);
   res.json({ clients: rows });
 });
 

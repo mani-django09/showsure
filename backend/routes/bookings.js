@@ -120,10 +120,10 @@ router.post('/public/:slug/bookings', bookingLimiter, async (req, res) => {
   const info = db
     .prepare(
       `INSERT INTO bookings (business_id, service_id, staff_id, customer_name, customer_phone,
-        date, start_min, end_min, cancel_token)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        date, start_min, end_min, cancel_token, deposit_cents_snapshot)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(b.id, service_id, staff_id, customer_name, customer_phone, date, start_min, end_min, cancel_token);
+    .run(b.id, service_id, staff_id, customer_name, customer_phone, date, start_min, end_min, cancel_token, b.deposit_cents);
 
   const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(info.lastInsertRowid);
 
@@ -318,6 +318,102 @@ router.patch('/bookings/:id', requireAuth, async (req, res) => {
   }
 
   res.json({ ok: true });
+});
+
+// Calendar date N days before a YYYY-MM-DD string (plain date math, no timezone lib needed
+// since we only ever move by whole days off an already-localized "today").
+function daysBefore(dateStr, days) {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
+// GET /api/analytics?range=7d|30d|90d|all — real numbers behind the revenue-recovery pitch
+router.get('/analytics', requireAuth, (req, res) => {
+  const id = req.business.id;
+  const range = ['7d', '30d', '90d', 'all'].includes(req.query.range) ? req.query.range : '30d';
+  const today = safeNowInTz(req.business.timezone).date;
+  const from = range === 'all' ? '0000-01-01' : daysBefore(today, { '7d': 6, '30d': 29, '90d': 89 }[range]);
+
+  const counts = db
+    .prepare(
+      `SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) AS confirmed,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
+        SUM(CASE WHEN status = 'no_show' THEN 1 ELSE 0 END) AS no_shows,
+        SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled,
+        COALESCE(SUM(CASE WHEN status = 'no_show' AND deposit_status = 'captured' THEN deposit_cents_snapshot ELSE 0 END), 0) AS deposits_captured_cents,
+        SUM(CASE WHEN status = 'no_show' AND deposit_status = 'captured' THEN 1 ELSE 0 END) AS deposits_captured_count
+       FROM bookings WHERE business_id = ? AND date BETWEEN ? AND ?`
+    )
+    .get(id, from, today);
+
+  const completedRevenue = db
+    .prepare(
+      `SELECT COALESCE(SUM(s.price_cents), 0) v FROM bookings bk
+       JOIN services s ON s.id = bk.service_id
+       WHERE bk.business_id = ? AND bk.status = 'completed' AND bk.date BETWEEN ? AND ?`
+    )
+    .get(id, from, today).v;
+
+  const waitlistJoined = db
+    .prepare(`SELECT COUNT(*) c FROM waitlist WHERE business_id = ? AND date(created_at) BETWEEN ? AND ?`)
+    .get(id, from, today).c;
+  const waitlistNotified = db
+    .prepare(`SELECT COUNT(*) c FROM waitlist WHERE business_id = ? AND notified = 1 AND date(created_at) BETWEEN ? AND ?`)
+    .get(id, from, today).c;
+
+  const reactivationSent = db
+    .prepare(`SELECT COUNT(*) c FROM reactivation_log WHERE business_id = ? AND date(sent_at) BETWEEN ? AND ?`)
+    .get(id, from, today).c;
+  // "Rebooked" = client got a win-back text and then made a new booking within 30 days of it.
+  const reactivationRebooked = db
+    .prepare(
+      `SELECT COUNT(DISTINCT rl.id) c FROM reactivation_log rl
+       WHERE rl.business_id = ? AND date(rl.sent_at) BETWEEN ? AND ?
+         AND EXISTS (
+           SELECT 1 FROM bookings bk
+           WHERE bk.business_id = rl.business_id AND bk.customer_phone = rl.customer_phone
+             AND bk.created_at > rl.sent_at AND bk.created_at <= datetime(rl.sent_at, '+30 days')
+         )`
+    )
+    .get(id, from, today).c;
+
+  const perStaff = db
+    .prepare(
+      `SELECT st.name,
+              COUNT(*) AS bookings,
+              SUM(CASE WHEN bk.status = 'no_show' THEN 1 ELSE 0 END) AS no_shows,
+              COALESCE(SUM(CASE WHEN bk.status = 'completed' THEN s.price_cents ELSE 0 END), 0) AS revenue_cents
+       FROM bookings bk
+       JOIN staff st ON st.id = bk.staff_id
+       JOIN services s ON s.id = bk.service_id
+       WHERE bk.business_id = ? AND bk.date BETWEEN ? AND ?
+       GROUP BY st.id ORDER BY bookings DESC`
+    )
+    .all(id, from, today);
+
+  const finished = (counts.completed || 0) + (counts.no_shows || 0);
+  const noShowRate = finished > 0 ? Math.round(((counts.no_shows || 0) / finished) * 100) : null;
+
+  res.json({
+    range, from, to: today,
+    appointments_total: counts.total || 0,
+    confirmed: counts.confirmed || 0,
+    completed: counts.completed || 0,
+    no_shows: counts.no_shows || 0,
+    cancelled: counts.cancelled || 0,
+    no_show_rate: noShowRate,
+    revenue_completed_cents: completedRevenue,
+    deposits_captured_count: counts.deposits_captured_count || 0,
+    deposits_captured_cents: counts.deposits_captured_cents || 0,
+    waitlist_joined: waitlistJoined,
+    waitlist_notified: waitlistNotified,
+    reactivation_sent: reactivationSent,
+    reactivation_rebooked: reactivationRebooked,
+    per_staff: perStaff,
+  });
 });
 
 // GET /api/stats — "$X saved" + per-staff breakdown + expected revenue

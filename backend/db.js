@@ -116,6 +116,12 @@ addColumn('businesses', "subscription_status TEXT DEFAULT 'inactive'"); // inact
 addColumn('businesses', "ls_subscription_id TEXT DEFAULT ''");
 addColumn('businesses', "ls_customer_id TEXT DEFAULT ''");
 addColumn('businesses', "current_period_end TEXT DEFAULT ''");
+// Analytics — snapshot the deposit amount at booking time so captured-revenue
+// totals stay accurate even after a business changes its deposit_cents later.
+addColumn('bookings', 'deposit_cents_snapshot INTEGER DEFAULT 0');
+db.exec(`UPDATE bookings SET deposit_cents_snapshot =
+  (SELECT deposit_cents FROM businesses WHERE businesses.id = bookings.business_id)
+  WHERE deposit_cents_snapshot = 0`);
 
 // Seed default hours (Tue-Sat 9:00-18:00) for a new business
 function seedDefaultHours(businessId) {

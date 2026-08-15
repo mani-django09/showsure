@@ -72,6 +72,9 @@ export default function BookingPage({ initialBiz, initialNotFound }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(null);
   const [card, setCard] = useState(null); // Square Web Payments SDK card element
+  const [waitlistForm, setWaitlistForm] = useState({ customer_name: '', customer_phone: '' });
+  const [waitlistJoined, setWaitlistJoined] = useState(false);
+  const [waitlistBusy, setWaitlistBusy] = useState(false);
 
   const days = useMemo(() => nextDays(14), []);
   const openWeekdays = useMemo(() => new Set((biz?.hours || []).map((h) => h.weekday)), [biz]);
@@ -84,6 +87,7 @@ export default function BookingPage({ initialBiz, initialNotFound }) {
   useEffect(() => {
     setSlots(null);
     setSlot(null);
+    setWaitlistJoined(false);
     if (!slug || !serviceId || !staffId || !date) return;
     api(`/public/${slug}/availability?service_id=${serviceId}&staff_id=${staffId}&date=${date}`)
       .then((d) => setSlots(d.slots))
@@ -143,6 +147,23 @@ export default function BookingPage({ initialBiz, initialNotFound }) {
       setError(err.message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function joinWaitlist(e) {
+    e.preventDefault();
+    setWaitlistBusy(true);
+    setError('');
+    try {
+      await api(`/public/${slug}/waitlist`, {
+        method: 'POST',
+        body: { service_id: serviceId, staff_id: staffId, date, ...waitlistForm },
+      });
+      setWaitlistJoined(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setWaitlistBusy(false);
     }
   }
 
@@ -318,7 +339,40 @@ export default function BookingPage({ initialBiz, initialNotFound }) {
               <>
                 <h2 style={{ marginTop: 16 }}>Pick a time</h2>
                 {slots.length === 0 ? (
-                  <p className="muted">Fully booked that day — try another date.</p>
+                  <div className="waitlist-box">
+                    {waitlistJoined ? (
+                      <p style={{ margin: 0 }}>
+                        ✅ You&apos;re on the waitlist! We&apos;ll text you the moment a spot opens up.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="muted" style={{ marginBottom: 10 }}>
+                          Fully booked that day. Join the waitlist and we&apos;ll text you the
+                          instant a spot opens up.
+                        </p>
+                        <form onSubmit={joinWaitlist} className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                          <input
+                            placeholder="Your name"
+                            value={waitlistForm.customer_name}
+                            onChange={(e) => setWaitlistForm({ ...waitlistForm, customer_name: e.target.value })}
+                            style={{ flex: '1 1 140px', marginBottom: 0 }}
+                            required
+                          />
+                          <input
+                            type="tel"
+                            placeholder="Mobile number"
+                            value={waitlistForm.customer_phone}
+                            onChange={(e) => setWaitlistForm({ ...waitlistForm, customer_phone: e.target.value })}
+                            style={{ flex: '1 1 140px', marginBottom: 0 }}
+                            required
+                          />
+                          <button type="submit" disabled={waitlistBusy} className="btn-secondary">
+                            {waitlistBusy ? 'Joining…' : 'Join waitlist'}
+                          </button>
+                        </form>
+                      </>
+                    )}
+                  </div>
                 ) : (
                   <div className="slot-grid">
                     {slots.map((t) => (

@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const { db } = require('../db');
 const { requireAuth } = require('./auth');
 const { holdDeposit, captureDeposit, releaseDeposit } = require('../lib/deposits');
-const { sendBookingSms, fmtTime } = require('../lib/sms');
+const { sendSms, sendBookingSms, fmtTime } = require('../lib/sms');
 const { safeNowInTz } = require('../lib/time');
 const { isActive } = require('../lib/plans');
 const { bookingLimiter } = require('../lib/rateLimit');
@@ -49,6 +49,27 @@ router.get('/public/:slug/availability', (req, res) => {
     if (!clash) slots.push(t);
   }
   res.json({ slots, duration_min: service.duration_min });
+});
+
+// ---- Waitlist (public) — join when a day is fully booked ----
+router.post('/public/:slug/waitlist', bookingLimiter, (req, res) => {
+  const b = db.prepare('SELECT * FROM businesses WHERE slug = ?').get(req.params.slug);
+  if (!b) return res.status(404).json({ error: 'Not found' });
+  const { service_id, staff_id, date, customer_name, customer_phone } = req.body || {};
+
+  const service = db
+    .prepare('SELECT id FROM services WHERE id = ? AND business_id = ? AND active = 1')
+    .get(service_id, b.id);
+  if (!service) return res.status(400).json({ error: 'Invalid service' });
+  if (!customer_name || !customer_phone) return res.status(400).json({ error: 'Name and phone required' });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return res.status(400).json({ error: 'Invalid date' });
+
+  db.prepare(
+    `INSERT INTO waitlist (business_id, service_id, staff_id, date, customer_name, customer_phone)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(b.id, service_id, staff_id || null, date, customer_name, customer_phone);
+
+  res.json({ ok: true });
 });
 
 // ---- Create booking (public) ----
@@ -130,6 +151,34 @@ router.post('/public/:slug/bookings', bookingLimiter, async (req, res) => {
   res.json({ id: booking.id, date, start_min, service: service.name, staff: staffRow.name });
 });
 
+// Revenue recovery: when a slot frees up (cancel or no-show), text anyone
+// waiting for that exact service+date (staff-specific or "any staff").
+async function notifyWaitlist(business, freedBooking) {
+  const matches = db
+    .prepare(
+      `SELECT * FROM waitlist
+       WHERE business_id = ? AND service_id = ? AND date = ? AND notified = 0
+         AND (staff_id IS NULL OR staff_id = ?)`
+    )
+    .all(business.id, freedBooking.service_id, freedBooking.date, freedBooking.staff_id);
+
+  for (const entry of matches) {
+    try {
+      await sendSms(
+        entry.customer_phone,
+        `Good news! A spot just opened up at ${business.name} on ${freedBooking.date}. ` +
+        `Book it before it's gone: ${process.env.FRONTEND_URL || 'http://localhost:3001'}/s/${business.slug}`
+      );
+    } catch (e) {
+      console.error('[waitlist] notify failed:', e.message);
+    }
+  }
+  if (matches.length) {
+    const ids = matches.map((m) => m.id);
+    db.prepare(`UPDATE waitlist SET notified = 1 WHERE id IN (${ids.map(() => '?').join(',')})`).run(...ids);
+  }
+}
+
 // ---- Customer self-cancel via SMS link (public) ----
 router.post('/public/cancel/:token', async (req, res) => {
   const booking = db.prepare(`SELECT * FROM bookings WHERE cancel_token = ?`).get(req.params.token);
@@ -142,6 +191,7 @@ router.post('/public/cancel/:token', async (req, res) => {
     await releaseDeposit(b, booking);
     db.prepare(`UPDATE bookings SET deposit_status = 'released' WHERE id = ?`).run(booking.id);
   }
+  await notifyWaitlist(b, booking);
   res.json({ ok: true, status: 'cancelled' });
 });
 
@@ -196,6 +246,22 @@ router.get('/clients', requireAuth, (req, res) => {
   res.json({ clients: rows });
 });
 
+// GET /api/waitlist — customers waiting for a fully-booked day (revenue recovery)
+router.get('/waitlist', requireAuth, (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT wl.id, wl.date, wl.customer_name, wl.customer_phone, wl.notified, wl.created_at,
+              s.name AS service_name, st.name AS staff_name
+       FROM waitlist wl
+       JOIN services s ON s.id = wl.service_id
+       LEFT JOIN staff st ON st.id = wl.staff_id
+       WHERE wl.business_id = ?
+       ORDER BY wl.notified ASC, wl.date ASC`
+    )
+    .all(req.business.id);
+  res.json({ waitlist: rows });
+});
+
 // GET /api/bookings?date=YYYY-MM-DD (default today)
 router.get('/bookings', requireAuth, (req, res) => {
   const date = req.query.date || new Date().toISOString().slice(0, 10);
@@ -245,6 +311,10 @@ router.patch('/bookings/:id', requireAuth, async (req, res) => {
       booking, 'review',
       `Thanks for visiting ${b.name}! We'd love a quick review: ${b.google_review_url}`
     );
+  }
+
+  if (status === 'cancelled' || status === 'no_show') {
+    await notifyWaitlist(b, booking);
   }
 
   res.json({ ok: true });

@@ -72,6 +72,30 @@ CREATE TABLE IF NOT EXISTS sms_log (
   sent_at TEXT DEFAULT (datetime('now')),
   UNIQUE(booking_id, type)
 );
+
+-- Customers waiting for a specific day (their preferred slot was full).
+-- Revenue-recovery feature: covers both "someone cancelled" and "a no-show
+-- freed a slot" — both just mean a matching confirmed booking disappeared,
+-- so a single trigger (see bookings.js status PATCH) handles both cases.
+CREATE TABLE IF NOT EXISTS waitlist (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  business_id INTEGER NOT NULL REFERENCES businesses(id),
+  service_id INTEGER NOT NULL REFERENCES services(id),
+  staff_id INTEGER REFERENCES staff(id),     -- NULL = any staff is fine
+  date TEXT NOT NULL,                        -- YYYY-MM-DD they want
+  customer_name TEXT NOT NULL,
+  customer_phone TEXT NOT NULL,
+  notified INTEGER DEFAULT 0,                -- 1 once we've texted them about an opening
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Tracks win-back SMS sends per customer so we don't re-send too often.
+CREATE TABLE IF NOT EXISTS reactivation_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  business_id INTEGER NOT NULL REFERENCES businesses(id),
+  customer_phone TEXT NOT NULL,
+  sent_at TEXT DEFAULT (datetime('now'))
+);
 `);
 
 // Lightweight migrations — add columns to existing DBs, ignore if already present

@@ -157,7 +157,7 @@ td, th { padding: 10px 8px; border-bottom: 1px solid var(--border); text-align: 
   display: flex; justify-content: space-between; align-items: center; gap: 12px;
 }
 .nav-inner .row { flex-wrap: nowrap; }
-.logo { font-weight: 800; font-size: 1.1rem; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; }
+.logo { font-weight: 800; font-size: 1.1rem; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; color: var(--text); text-decoration: none; }
 .logo-mark {
   width: 28px; height: 28px; border-radius: 8px; background: var(--grad); color: #fff;
   display: inline-flex; align-items: center; justify-content: center;
@@ -463,22 +463,6 @@ td, th { padding: 10px 8px; border-bottom: 1px solid var(--border); text-align: 
   background: var(--primary-soft); color: var(--primary);
 }
 
-/* ---- Public slim nav (booking / search pages) ---- */
-.pubnav { background: #fff; border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); }
-.pubnav-inner {
-  max-width: 1000px; margin: 0 auto; padding: 11px 18px;
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-}
-.pubnav-brand {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-weight: 800; text-decoration: none; color: var(--text);
-}
-.pubnav-brand .mark {
-  width: 28px; height: 28px; border-radius: 8px; background: var(--grad);
-  display: inline-flex; align-items: center; justify-content: center; font-size: 0.95rem;
-  box-shadow: 0 2px 8px rgba(109,40,217,0.3);
-}
-
 /* ---- Shared rich footer ---- */
 .site-footer {
   background: #17172b; color: #cbc9d8; margin-top: 48px;
@@ -636,6 +620,11 @@ tbody tr:hover { background: #faf9fe; }
   max-width: 640px; margin: -56px auto 0; padding: 0 18px; position: relative;
 }
 .bp-content .card { box-shadow: var(--shadow-lg); }
+
+.waitlist-box {
+  background: var(--primary-soft); border: 1px solid #e4dcff;
+  border-radius: 12px; padding: 14px 16px;
+}
 
 .bp-powered {
   text-align: center; color: var(--muted); font-size: 0.82rem;

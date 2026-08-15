@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [bookings, setBookings] = useState([]);
   const [week, setWeek] = useState([]);
   const [clients, setClients] = useState([]);
+  const [waitlist, setWaitlist] = useState([]);
   const [error, setError] = useState('');
 
   // Setup forms
@@ -74,6 +75,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (tab !== 'clients') return;
     api('/clients', { auth: true }).then((d) => setClients(d.clients)).catch((e) => setError(e.message));
+    api('/waitlist', { auth: true }).then((d) => setWaitlist(d.waitlist)).catch((e) => setError(e.message));
   }, [tab]);
 
   useEffect(() => {
@@ -302,6 +304,36 @@ export default function Dashboard() {
 
         {/* ---- CLIENTS (CRM) ---- */}
         {tab === 'clients' && (
+          <>
+          {waitlist.length > 0 && (
+            <div className="card">
+              <h2>⏳ Waitlist ({waitlist.length})</h2>
+              <p className="muted" style={{ marginBottom: 10 }}>
+                Customers waiting for a fully-booked day — we text them automatically the moment a matching slot opens up.
+              </p>
+              <table>
+                <thead>
+                  <tr><th>Client</th><th>Phone</th><th>Service</th><th>Staff</th><th>Wants date</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                  {waitlist.map((w) => (
+                    <tr key={w.id}>
+                      <td>{w.customer_name}</td>
+                      <td className="muted">{w.customer_phone}</td>
+                      <td>{w.service_name}</td>
+                      <td className="muted">{w.staff_name || 'Any staff'}</td>
+                      <td>{w.date}</td>
+                      <td>
+                        {w.notified
+                          ? <span className="badge confirmed">Notified</span>
+                          : <span className="badge no_show">Waiting</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           <div className="card">
             <h2>Clients ({clients.length})</h2>
             {clients.length === 0 ? (
@@ -338,6 +370,7 @@ export default function Dashboard() {
               </table>
             )}
           </div>
+          </>
         )}
 
         {/* ---- BILLING ---- */}

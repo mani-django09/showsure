@@ -94,7 +94,15 @@ router.get('/public/search', (req, res) => {
   const service = (req.query.service || '').trim();
   const location = (req.query.location || '').trim();
 
-  let sql = 'SELECT id, name, slug, address, about, deposit_cents FROM businesses WHERE 1=1';
+  // The directory is admin-curated AND only shows salons that can actually be
+  // booked — otherwise a listing leads to a booking that fails with 403.
+  let sql = `SELECT id, name, slug, address, about, deposit_cents, subscription_status, trial_ends_at
+             FROM businesses
+             WHERE directory_status = 'approved'
+               AND TRIM(COALESCE(address, '')) <> ''
+               AND EXISTS (SELECT 1 FROM services sv WHERE sv.business_id = businesses.id AND sv.active = 1)
+               AND EXISTS (SELECT 1 FROM staff st WHERE st.business_id = businesses.id AND st.active = 1)
+               AND EXISTS (SELECT 1 FROM hours h WHERE h.business_id = businesses.id)`;
   const params = [];
   if (location) {
     sql += ' AND address LIKE ?';
@@ -107,7 +115,8 @@ router.get('/public/search', (req, res) => {
   }
   sql += ' ORDER BY name LIMIT 50';
 
-  const rows = db.prepare(sql).all(...params);
+  // Subscription state is a JS rule (isActive), so filter it after the query
+  const rows = db.prepare(sql).all(...params).filter(isActive);
   const salons = rows.map((b) => ({
     name: b.name, slug: b.slug, address: b.address, about: b.about, deposit_cents: b.deposit_cents,
     services: db

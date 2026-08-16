@@ -116,6 +116,9 @@ addColumn('businesses', "subscription_status TEXT DEFAULT 'inactive'"); // inact
 addColumn('businesses', "ls_subscription_id TEXT DEFAULT ''");
 addColumn('businesses', "ls_customer_id TEXT DEFAULT ''");
 addColumn('businesses', "current_period_end TEXT DEFAULT ''");
+// Public directory is admin-curated: signing up gives a salon its own booking
+// page, but it only appears in /search after an admin approves it.
+addColumn('businesses', "directory_status TEXT DEFAULT 'pending'"); // pending | approved | rejected
 // Analytics — snapshot the deposit amount at booking time so captured-revenue
 // totals stay accurate even after a business changes its deposit_cents later.
 addColumn('bookings', 'deposit_cents_snapshot INTEGER DEFAULT 0');

@@ -7,6 +7,7 @@ const { router: authRouter } = require('./routes/auth');
 const businessRouter = require('./routes/business');
 const bookingsRouter = require('./routes/bookings');
 const squareRouter = require('./routes/square');
+const adminRouter = require('./routes/admin');
 const { router: billingRouter, handleWebhook } = require('./routes/billing');
 const { startReminderLoop } = require('./lib/reminders');
 const { startReactivationLoop } = require('./lib/reactivation');
@@ -24,6 +25,7 @@ app.use('/api/auth', authRouter);
 app.use('/api', businessRouter);
 app.use('/api', bookingsRouter);
 app.use('/api', squareRouter);
+app.use('/api', adminRouter);
 app.use('/api', billingRouter);
 
 const PORT = process.env.PORT || 5055;

@@ -106,8 +106,11 @@ export default function Search() {
               <div className="card" style={{ textAlign: 'center', padding: 40 }}>
                 <div className="empty-icon"><Icon name="search" size={26} /></div>
                 <h2>No salons found</h2>
-                <p className="muted">Try a different city or service — or, if you run a salon, list yours free.</p>
-                <Link href="/signup" className="btn" style={{ marginTop: 12 }}>List your salon free</Link>
+                <p className="muted">
+                  Try a different city or service. Run a salon? Create your booking page — we review
+                  every salon before it appears here.
+                </p>
+                <Link href="/signup" className="btn" style={{ marginTop: 12 }}>Create your booking page</Link>
               </div>
             ) : (
               <div className="grid3">

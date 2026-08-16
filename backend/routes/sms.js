@@ -22,10 +22,18 @@ const router = express.Router();
 // POSTing fake "From"/"Body" pairs and claiming slots for someone else's number.
 function isValidTwilioRequest(req) {
   const authToken = process.env.TWILIO_AUTH_TOKEN;
-  if (!authToken) return false; // never trust an unverifiable request
+  const url = process.env.SMS_WEBHOOK_URL;
+  if (!authToken || !url) return false; // never trust an unverifiable request
   const signature = req.headers['x-twilio-signature'];
-  const url = process.env.SMS_WEBHOOK_URL || `${process.env.BACKEND_URL || ''}/api/sms/inbound`;
-  return twilio.validateRequest(authToken, signature || '', url, req.body || {});
+  try {
+    // twilio.validateRequest throws (not just returns false) on a malformed
+    // URL — never let that escape as an uncaught rejection and take the
+    // whole process down with it.
+    return twilio.validateRequest(authToken, signature || '', url, req.body || {});
+  } catch (e) {
+    console.error('[sms:inbound] signature check errored:', e.message);
+    return false;
+  }
 }
 
 const YES_RE = /^\s*y(es)?\s*!?\s*$/i;

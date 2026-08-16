@@ -125,17 +125,6 @@ addColumn('bookings', 'deposit_cents_snapshot INTEGER DEFAULT 0');
 // Two-way SMS waitlist claiming — "Reply YES to claim it"
 addColumn('waitlist', "notified_at TEXT DEFAULT ''"); // when we texted them about the opening
 addColumn('waitlist', "claimed_at TEXT DEFAULT ''"); // set once they've claimed a slot by reply
-
-// Text-based AI concierge — logs each AI-answered inbound text, doubling as
-// a per-phone rate limit so a stray number can't run up the API bill.
-db.exec(`
-CREATE TABLE IF NOT EXISTS sms_ai_log (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  business_id INTEGER NOT NULL REFERENCES businesses(id),
-  customer_phone TEXT NOT NULL,
-  created_at TEXT DEFAULT (datetime('now'))
-);
-`);
 db.exec(`UPDATE bookings SET deposit_cents_snapshot =
   (SELECT deposit_cents FROM businesses WHERE businesses.id = bookings.business_id)
   WHERE deposit_cents_snapshot = 0`);

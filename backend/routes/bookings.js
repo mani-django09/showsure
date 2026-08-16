@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const { db } = require('../db');
 const { requireAuth } = require('./auth');
 const { holdDeposit, captureDeposit, releaseDeposit } = require('../lib/deposits');
-const { sendSms, sendBookingSms, fmtTime } = require('../lib/sms');
+const { sendSms, sendBookingSms, fmtTime, toE164 } = require('../lib/sms');
 const { safeNowInTz } = require('../lib/time');
 const { isActive } = require('../lib/plans');
 const { bookingLimiter } = require('../lib/rateLimit');
@@ -11,6 +11,35 @@ const { bookingLimiter } = require('../lib/rateLimit');
 const router = express.Router();
 const SLOT_STEP = 15; // slot granularity in minutes
 const MIN_LEAD_MIN = 15; // clients must book at least this many minutes ahead
+
+// Shared slot-finder — used by the public availability endpoint, reschedule,
+// and the SMS waitlist-claim flow. `excludeBookingId` lets a booking being
+// rescheduled ignore its own (about-to-move) row when checking for clashes.
+function computeSlots(business, service, staffId, date, excludeBookingId) {
+  const weekday = new Date(`${date}T00:00:00`).getDay();
+  const hrs = db.prepare('SELECT * FROM hours WHERE business_id = ? AND weekday = ?').get(business.id, weekday);
+  if (!hrs) return []; // closed
+
+  // Past dates have no availability; for today, hide slots that already passed
+  const now = safeNowInTz(business.timezone);
+  if (date < now.date) return [];
+  const earliest = date === now.date ? now.min + MIN_LEAD_MIN : 0;
+
+  let takenSql = `SELECT start_min, end_min FROM bookings
+     WHERE business_id = ? AND staff_id = ? AND date = ? AND status IN ('confirmed', 'completed')`;
+  const takenParams = [business.id, staffId, date];
+  if (excludeBookingId) { takenSql += ' AND id != ?'; takenParams.push(excludeBookingId); }
+  const taken = db.prepare(takenSql).all(...takenParams);
+
+  const slots = [];
+  for (let t = hrs.open_min; t + service.duration_min <= hrs.close_min; t += SLOT_STEP) {
+    if (t < earliest) continue;
+    const end = t + service.duration_min;
+    const clash = taken.some((k) => t < k.end_min && end > k.start_min);
+    if (!clash) slots.push(t);
+  }
+  return slots;
+}
 
 // ---- Availability (public) ----
 // GET /api/public/:slug/availability?service_id=1&staff_id=2&date=2026-07-10
@@ -24,31 +53,7 @@ router.get('/public/:slug/availability', (req, res) => {
   if (!service || !/^\d{4}-\d{2}-\d{2}$/.test(date || '')) {
     return res.status(400).json({ error: 'service_id and date (YYYY-MM-DD) required' });
   }
-
-  const weekday = new Date(`${date}T00:00:00`).getDay();
-  const hrs = db.prepare('SELECT * FROM hours WHERE business_id = ? AND weekday = ?').get(b.id, weekday);
-  if (!hrs) return res.json({ slots: [] }); // closed
-
-  // Past dates have no availability; for today, hide slots that already passed
-  const now = safeNowInTz(b.timezone);
-  if (date < now.date) return res.json({ slots: [] });
-  const earliest = date === now.date ? now.min + MIN_LEAD_MIN : 0;
-
-  const taken = db
-    .prepare(
-      `SELECT start_min, end_min FROM bookings
-       WHERE business_id = ? AND staff_id = ? AND date = ? AND status IN ('confirmed', 'completed')`
-    )
-    .all(b.id, staff_id, date);
-
-  const slots = [];
-  for (let t = hrs.open_min; t + service.duration_min <= hrs.close_min; t += SLOT_STEP) {
-    if (t < earliest) continue;
-    const end = t + service.duration_min;
-    const clash = taken.some((k) => t < k.end_min && end > k.start_min);
-    if (!clash) slots.push(t);
-  }
-  res.json({ slots, duration_min: service.duration_min });
+  res.json({ slots: computeSlots(b, service, staff_id, date), duration_min: service.duration_min });
 });
 
 // ---- Waitlist (public) — join when a day is fully booked ----
@@ -67,7 +72,7 @@ router.post('/public/:slug/waitlist', bookingLimiter, (req, res) => {
   db.prepare(
     `INSERT INTO waitlist (business_id, service_id, staff_id, date, customer_name, customer_phone)
      VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(b.id, service_id, staff_id || null, date, customer_name, customer_phone);
+  ).run(b.id, service_id, staff_id || null, date, customer_name, toE164(customer_phone));
 
   res.json({ ok: true });
 });
@@ -123,7 +128,7 @@ router.post('/public/:slug/bookings', bookingLimiter, async (req, res) => {
         date, start_min, end_min, cancel_token, deposit_cents_snapshot)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(b.id, service_id, staff_id, customer_name, customer_phone, date, start_min, end_min, cancel_token, b.deposit_cents);
+    .run(b.id, service_id, staff_id, customer_name, toE164(customer_phone), date, start_min, end_min, cancel_token, b.deposit_cents);
 
   const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(info.lastInsertRowid);
 
@@ -167,7 +172,7 @@ async function notifyWaitlist(business, freedBooking) {
       await sendSms(
         entry.customer_phone,
         `Good news! A spot just opened up at ${business.name} on ${freedBooking.date}. ` +
-        `Book it before it's gone: ${process.env.FRONTEND_URL || 'http://localhost:3001'}/s/${business.slug}`
+        `Reply YES to claim it, or book online: ${process.env.FRONTEND_URL || 'http://localhost:3001'}/s/${business.slug}`
       );
     } catch (e) {
       console.error('[waitlist] notify failed:', e.message);
@@ -175,7 +180,9 @@ async function notifyWaitlist(business, freedBooking) {
   }
   if (matches.length) {
     const ids = matches.map((m) => m.id);
-    db.prepare(`UPDATE waitlist SET notified = 1 WHERE id IN (${ids.map(() => '?').join(',')})`).run(...ids);
+    db.prepare(
+      `UPDATE waitlist SET notified = 1, notified_at = datetime('now') WHERE id IN (${ids.map(() => '?').join(',')})`
+    ).run(...ids);
   }
 }
 
@@ -193,6 +200,99 @@ router.post('/public/cancel/:token', async (req, res) => {
   }
   await notifyWaitlist(b, booking);
   res.json({ ok: true, status: 'cancelled' });
+});
+
+// ---- Manage booking via SMS link (public) — powers the cancel/reschedule page ----
+
+// GET /api/public/booking/:token — booking + salon info for the manage page
+router.get('/public/booking/:token', (req, res) => {
+  const booking = db.prepare('SELECT * FROM bookings WHERE cancel_token = ?').get(req.params.token);
+  if (!booking) return res.status(404).json({ error: 'Not found' });
+  const b = db.prepare('SELECT id, name, slug, timezone FROM businesses WHERE id = ?').get(booking.business_id);
+  const service = db.prepare('SELECT id, name, duration_min, price_cents FROM services WHERE id = ?').get(booking.service_id);
+  const staffRow = db.prepare('SELECT id, name FROM staff WHERE id = ?').get(booking.staff_id);
+  const hours = db.prepare('SELECT weekday, open_min, close_min FROM hours WHERE business_id = ?').all(b.id);
+
+  res.json({
+    status: booking.status,
+    date: booking.date,
+    start_min: booking.start_min,
+    deposit_cents: booking.deposit_cents_snapshot,
+    business: { name: b.name, slug: b.slug },
+    service: service ? { id: service.id, name: service.name, duration_min: service.duration_min, price_cents: service.price_cents } : null,
+    staff: staffRow ? { id: staffRow.id, name: staffRow.name } : null,
+    hours,
+  });
+});
+
+// GET /api/public/booking/:token/availability?date=YYYY-MM-DD — slots for rescheduling,
+// excluding the booking's own current slot from the clash check
+router.get('/public/booking/:token/availability', (req, res) => {
+  const booking = db.prepare('SELECT * FROM bookings WHERE cancel_token = ?').get(req.params.token);
+  if (!booking) return res.status(404).json({ error: 'Not found' });
+  const b = db.prepare('SELECT * FROM businesses WHERE id = ?').get(booking.business_id);
+  const service = db.prepare('SELECT * FROM services WHERE id = ?').get(booking.service_id);
+  const date = req.query.date;
+  if (!service || !/^\d{4}-\d{2}-\d{2}$/.test(date || '')) {
+    return res.status(400).json({ error: 'date (YYYY-MM-DD) required' });
+  }
+  res.json({ slots: computeSlots(b, service, booking.staff_id, date, booking.id) });
+});
+
+// POST /api/public/reschedule/:token  { date, start_min } — move a confirmed booking
+router.post('/public/reschedule/:token', bookingLimiter, async (req, res) => {
+  const booking = db.prepare('SELECT * FROM bookings WHERE cancel_token = ?').get(req.params.token);
+  if (!booking) return res.status(404).json({ error: 'Not found' });
+  if (booking.status !== 'confirmed') {
+    return res.status(400).json({ error: `This booking is already ${booking.status.replace('_', '-')} and can't be rescheduled.` });
+  }
+
+  const b = db.prepare('SELECT * FROM businesses WHERE id = ?').get(booking.business_id);
+  const service = db.prepare('SELECT * FROM services WHERE id = ?').get(booking.service_id);
+  const { date, start_min } = req.body || {};
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '') || !Number.isInteger(start_min)) {
+    return res.status(400).json({ error: 'Invalid date/time' });
+  }
+  const end_min = start_min + service.duration_min;
+
+  const now = safeNowInTz(b.timezone);
+  if (date < now.date || (date === now.date && start_min < now.min + MIN_LEAD_MIN)) {
+    return res.status(400).json({ error: 'That time has already passed — pick a later slot' });
+  }
+  const weekday = new Date(`${date}T00:00:00`).getDay();
+  const hrs = db.prepare('SELECT * FROM hours WHERE business_id = ? AND weekday = ?').get(b.id, weekday);
+  if (!hrs || start_min < hrs.open_min || end_min > hrs.close_min) {
+    return res.status(400).json({ error: 'Outside business hours' });
+  }
+  const clash = db
+    .prepare(
+      `SELECT 1 FROM bookings
+       WHERE business_id = ? AND staff_id = ? AND date = ? AND id != ?
+         AND status IN ('confirmed', 'completed') AND ? < end_min AND ? > start_min`
+    )
+    .get(b.id, booking.staff_id, date, booking.id, start_min, end_min);
+  if (clash) return res.status(409).json({ error: 'That slot was just taken — pick another' });
+
+  const oldDate = booking.date;
+  db.prepare('UPDATE bookings SET date = ?, start_min = ?, end_min = ? WHERE id = ?').run(date, start_min, end_min, booking.id);
+  // Reminders are deduped per (booking, type) — clear the log so 24h/2h texts
+  // fire fresh for the new time instead of staying silenced from the old one.
+  db.prepare(`DELETE FROM sms_log WHERE booking_id = ? AND type IN ('remind_24h', 'remind_2h')`).run(booking.id);
+
+  // The old slot just freed up — same recovery path as a cancellation
+  await notifyWaitlist(b, { ...booking, date: oldDate });
+
+  try {
+    await sendSms(
+      booking.customer_phone,
+      `Your appointment at ${b.name} was moved to ${date} ${fmtTime(start_min)}. ` +
+      `Manage it: ${process.env.FRONTEND_URL || 'http://localhost:3001'}/cancel/${booking.cancel_token}`
+    );
+  } catch (e) {
+    console.error('[reschedule] confirmation sms failed:', e.message);
+  }
+
+  res.json({ ok: true, date, start_min, service: service.name });
 });
 
 // ---- Dashboard (auth) ----
@@ -454,5 +554,10 @@ router.get('/stats', requireAuth, (req, res) => {
     per_staff: perStaff,
   });
 });
+
+// Exposed for the SMS inbound router (waitlist "Reply YES" claim flow) — the
+// router function itself is still the default Express middleware.
+router.computeSlots = computeSlots;
+router.notifyWaitlist = notifyWaitlist;
 
 module.exports = router;

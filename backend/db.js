@@ -122,6 +122,9 @@ addColumn('businesses', "directory_status TEXT DEFAULT 'pending'"); // pending |
 // Analytics — snapshot the deposit amount at booking time so captured-revenue
 // totals stay accurate even after a business changes its deposit_cents later.
 addColumn('bookings', 'deposit_cents_snapshot INTEGER DEFAULT 0');
+// Two-way SMS waitlist claiming — "Reply YES to claim it"
+addColumn('waitlist', "notified_at TEXT DEFAULT ''"); // when we texted them about the opening
+addColumn('waitlist', "claimed_at TEXT DEFAULT ''"); // set once they've claimed a slot by reply
 db.exec(`UPDATE bookings SET deposit_cents_snapshot =
   (SELECT deposit_cents FROM businesses WHERE businesses.id = bookings.business_id)
   WHERE deposit_cents_snapshot = 0`);

@@ -1,15 +1,22 @@
 import Link from 'next/link';
 import Icon from './Icon';
 
-// Slim top bar for customer-facing pages (booking, search)
+// Shared top bar for every public-facing page (home, about, pricing, booking, search…)
+// so the header never changes when navigating between pages.
 export default function PublicNav() {
   return (
-    <nav className="pubnav">
-      <div className="pubnav-inner">
-        <Link href="/" className="pubnav-brand">
-          <span className="mark"><Icon name="shield" size={16} /></span> ShowSure
+    <nav className="nav">
+      <div className="nav-inner">
+        <Link href="/" className="logo">
+          <span className="logo-mark"><Icon name="shield" size={15} /></span> ShowSure
         </Link>
-        <Link href="/signup" className="btn btn-sm">For salons <Icon name="arrow" size={15} style={{ verticalAlign: '-2px' }} /></Link>
+        <div className="row">
+          <Link href="/#categories" className="nav-link">Who it&apos;s for</Link>
+          <Link href="/#pricing" className="nav-link">Pricing</Link>
+          <Link href="/#faq" className="nav-link">FAQ</Link>
+          <Link href="/login" className="nav-link">Log in</Link>
+          <Link href="/signup" className="btn btn-sm">Start free</Link>
+        </div>
       </div>
     </nav>
   );

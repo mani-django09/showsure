@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Footer from '../components/Footer';
+import PublicNav from '../components/PublicNav';
 import Icon from '../components/Icon';
 import { PhoneMockup, DepositShield, SmsReminder } from '../components/Illustrations';
 
@@ -20,15 +21,11 @@ const FEATURES = [
   { icon: 'lock', title: 'Card deposit at booking', desc: 'Clients book with a card hold — not a charge. Serious clients book, tire-kickers don\'t.' },
   { icon: 'zap', title: 'Automatic no-show charges', desc: 'Someone doesn\'t show? The deposit is charged automatically. No awkward phone calls.' },
   { icon: 'message', title: 'SMS reminders that work', desc: 'Confirmation instantly, reminders 24h and 2h before — with a one-tap cancel link so your slot frees up in time.' },
-  { icon: 'star', title: 'Review booster', desc: 'After every visit, clients get a text asking for a Google review. Your rating grows on autopilot.' },
+  { icon: 'bell', title: 'Auto-fill cancelled slots', desc: 'When a client cancels, ShowSure texts your waitlist automatically — so an open slot doesn\'t just sit there.' },
+  { icon: 'undo', title: 'Win back quiet clients', desc: 'Clients who haven\'t booked in 90 days get an automatic text nudging them to rebook. No manual follow-up.' },
   { icon: 'link', title: 'One link for your bio', desc: 'A clean booking page made for Instagram. Add it to your bio and take bookings while you sleep.' },
+  { icon: 'star', title: 'Review booster', desc: 'After every visit, clients get a text asking for a Google review. Your rating grows on autopilot.' },
   { icon: 'wallet', title: 'Your money, your account', desc: 'Deposits go straight to your own Square account. We never hold or touch your money. Zero commission.' },
-];
-
-const TESTIMONIALS = [
-  { name: 'Bella Nails Studio', city: 'Austin, TX', icon: 'sparkle', grad: 'linear-gradient(135deg,#f9a8d4,#c084fc)', rating: 5, quote: 'No-shows went from 6 a week to almost none. The deposit hold does all the work — I don\'t have to be the bad guy anymore.' },
-  { name: 'Lash Lounge by Kim', city: 'Miami, FL', icon: 'eye', grad: 'linear-gradient(135deg,#a5b4fc,#818cf8)', rating: 5, quote: 'Set it up in 10 minutes, put the link in my IG bio, and bookings just come in. The reminders alone paid for it.' },
-  { name: 'Fade Room Barbers', city: 'Atlanta, GA', icon: 'razor', grad: 'linear-gradient(135deg,#93c5fd,#60a5fa)', rating: 5, quote: 'Flat price, no commission on my cuts like the other apps. Deposits land in my own Square. Exactly what I wanted.' },
 ];
 
 const PLANS = [
@@ -44,7 +41,7 @@ const FAQS = [
   { q: 'What if a client cancels in time?', a: 'Every confirmation and reminder text includes a one-tap cancel link. If they cancel before your cutoff, the deposit hold is released instantly and the slot opens up for someone else — which is exactly the point.' },
   { q: 'Do my clients need to download an app?', a: 'No. Your booking page is a simple link that works in any browser — perfect for your Instagram bio, Google Business profile, or a QR code at the front desk. Clients book in under a minute, no account required.' },
   { q: 'How is ShowSure different from Fresha or Vagaro?', a: 'ShowSure does one thing extremely well — protecting your calendar from no-shows — without the bloat or the commission. Fresha is free but takes a cut of your new clients; Vagaro is a heavy all-in-one suite. ShowSure is a flat monthly price, zero commission, deposits in your own account, and set up in 10 minutes.' },
-  { q: 'How do I stop no-shows at my salon?', a: 'The two things that cut no-shows the most are (1) a required card deposit that gives clients skin in the game, and (2) timely SMS reminders 24 and 2 hours before. ShowSure automates both, which is why salons typically see no-shows drop by more than half.' },
+  { q: 'How do I stop no-shows at my salon?', a: 'The two things that cut no-shows the most are (1) a required card deposit that gives clients skin in the game, and (2) timely SMS reminders 24 and 2 hours before. ShowSure automates both, so you\'re not relying on clients to remember or on yourself to chase them down.' },
   { q: 'Can I cancel anytime?', a: 'Yes. There\'s no lock-in contract — cancel your subscription whenever you want and you\'ll keep access until the end of your current billing period.' },
 ];
 
@@ -94,7 +91,6 @@ export default function Home() {
             applicationCategory: 'BusinessApplication',
             description: 'Booking software for salons with card deposits, automatic no-show charges and SMS reminders.',
             offers: { '@type': 'Offer', price: '29.00', priceCurrency: 'USD' },
-            aggregateRating: { '@type': 'AggregateRating', ratingValue: '4.9', ratingCount: '38' },
           }).replace(/</g, '\\u003c') }}
         />
         <script
@@ -107,33 +103,24 @@ export default function Home() {
         />
       </Head>
 
-      {/* Nav */}
-      <nav className="nav">
-        <div className="nav-inner">
-          <span className="logo"><span className="logo-mark"><Icon name="shield" size={15} /></span> ShowSure</span>
-          <div className="row">
-            <a href="#categories" className="nav-link">Who it&apos;s for</a>
-            <a href="#pricing" className="nav-link">Pricing</a>
-            <a href="#faq" className="nav-link">FAQ</a>
-            <Link href="/login" className="nav-link">Log in</Link>
-            <Link href="/signup" className="btn btn-sm">Start free</Link>
-          </div>
-        </div>
-      </nav>
+      <PublicNav />
 
-      {/* Hero — Fresha-style search widget */}
+      {/* Hero — revenue recovery positioning */}
       <header className="hero3">
-        <div className="container" style={{ textAlign: 'center' }}>
+        <div className="container hero-center">
           <div className="pill">For nail techs · lash artists · hair · barbers · spas</div>
-          <h1>The booking page your clients love —<br /><span className="accent">and that stops no-shows.</span></h1>
-          <p className="sub">Card deposits, SMS reminders and automatic no-show charges. Deposits land in <b>your own account</b> — we never take a cut.</p>
+          <h1>Stop Losing Money to <span className="accent">Salon No-Shows</span></h1>
+          <p className="sub">
+            Automatically collect deposits, remind clients, fill cancelled appointments, and recover
+            lost revenue — without chasing clients manually.
+          </p>
 
-          {/* Real salon search: service + location */}
+          {/* Client-facing salon search */}
           <div className="search-widget">
             <div className="search-field">
               <label>Service</label>
               <select value={search.service} onChange={(e) => setSearch({ ...search, service: e.target.value })}>
-                <option value="">Any service</option>
+                <option value="">All treatments</option>
                 <option value="Manicure">Manicure</option>
                 <option value="Lash">Lashes</option>
                 <option value="Brow">Brows</option>
@@ -160,24 +147,77 @@ export default function Home() {
               <Icon name="search" size={17} style={{ verticalAlign: '-3px', marginRight: 4 }} /> Search
             </button>
           </div>
-          <p className="muted" style={{ marginTop: 10 }}>
-            Find a salon near you and book in seconds — deposits held on your card, charged only if you no-show.
-          </p>
 
-          <div className="row" style={{ justifyContent: 'center', marginTop: 20 }}>
-            <Link href="/signup" className="btn btn-lg">Get started</Link>
-            <a href="#how" className="btn btn-secondary btn-lg">How it works</a>
+          <ul className="hero-trust">
+            <li><Icon name="check" size={15} /> Zero commission</li>
+            <li><Icon name="check" size={15} /> Set up in 10 minutes</li>
+            <li><Icon name="check" size={15} /> Cancel anytime</li>
+          </ul>
+
+          <div className="row hero-cta-row">
+            <a href="#how" className="btn btn-lg">See How It Works</a>
+            <Link href="/signup" className="btn btn-secondary btn-lg">Get started</Link>
+          </div>
+
+          <div className="hero-visual">
+            {/* Photo: Pexels #10318038 — Pexels License (free commercial use, no attribution required) */}
+            <picture>
+              <source srcSet="/salon-hero.webp" type="image/webp" />
+              <img
+                src="/salon-hero.jpg"
+                alt="Hair stylist styling a client's hair at a salon station"
+                className="salon-photo"
+                width="1280"
+                height="800"
+                decoding="async"
+              />
+            </picture>
+            {/* Visual dashboard mockup — illustrative example, not live data */}
+            <div className="dash-card">
+              <div className="dash-card-head">
+                <span className="dash-dots"><span /><span /><span /></span>
+                <span className="dash-card-title">Example — a typical day</span>
+              </div>
+              <div className="dash-stats">
+                <div className="dash-stat">
+                  <span className="dash-stat-num">14</span>
+                  <span className="dash-stat-label">Appointments</span>
+                </div>
+                <div className="dash-stat">
+                  <span className="dash-stat-num">12</span>
+                  <span className="dash-stat-label">Confirmed</span>
+                </div>
+                <div className="dash-stat">
+                  <span className="dash-stat-num dash-stat-money">$65</span>
+                  <span className="dash-stat-label">Revenue recovered</span>
+                </div>
+              </div>
+              <div className="dash-activity">
+                <div className="dash-activity-row">
+                  <span className="row" style={{ gap: 8 }}><Icon name="lock" size={15} style={{ color: 'var(--success)' }} /> No-show prevented</span>
+                  <span className="dash-pill dash-pill-good">Deposit charged</span>
+                </div>
+                <div className="dash-activity-row">
+                  <span className="row" style={{ gap: 8 }}><Icon name="undo" size={15} style={{ color: '#b45309' }} /> Cancelled slot</span>
+                  <span className="dash-pill dash-pill-neutral">Opened up</span>
+                </div>
+                <div className="dash-activity-row">
+                  <span className="row" style={{ gap: 8 }}><Icon name="bell" size={15} style={{ color: 'var(--success)' }} /> Recovered booking</span>
+                  <span className="dash-pill dash-pill-good">Filled from waitlist</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+
       </header>
 
-      {/* Trust strip */}
+      {/* Trust strip — verifiable product facts only */}
       <section className="container">
         <div className="row">
-          <div className="stat"><div className="num">-60%</div><div className="muted">typical no-show drop</div></div>
           <div className="stat"><div className="num">0%</div><div className="muted">commission — flat price</div></div>
           <div className="stat"><div className="num">10 min</div><div className="muted">to your first booking link</div></div>
-          <div className="stat"><div className="num" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="star" size={20} style={{ color: '#f59e0b' }} /> 4.9</div><div className="muted">loved by beauty pros</div></div>
+          <div className="stat"><div className="num">24/7</div><div className="muted">clients can book, anytime</div></div>
         </div>
       </section>
 
@@ -207,19 +247,17 @@ export default function Home() {
 
       {/* The cost of no-shows — problem/agitation */}
       <section className="cost-band">
-        <div className="container" style={{ textAlign: 'center' }}>
-          <span className="eyebrow" style={{ color: '#fff', opacity: 0.85 }}>The quiet leak</span>
-          <h2 style={{ color: '#fff' }}>No-shows cost the average studio <span className="accent-light">$3,000+ a year</span></h2>
-          <p style={{ color: 'rgba(255,255,255,0.9)', maxWidth: 640, margin: '10px auto 0' }}>
-            An empty chair earns nothing — but your rent, products and time still get spent. Two no-shows
-            a week at $50 each is over $5,000 gone in a year. A small refundable deposit turns
-            &ldquo;maybe I&apos;ll come&rdquo; into a real commitment, and ShowSure collects it automatically so you
-            never have to be the bad guy.
+        <div className="container">
+          <span className="eyebrow cost-eyebrow">The quiet leak</span>
+          <h2>Every empty chair is <span className="accent-light">revenue that just walked out</span></h2>
+          <p>
+            A no-show earns nothing — but your rent, products and time still get spent. ShowSure
+            handles it automatically, so you never have to be the bad guy.
           </p>
-          <div className="row" style={{ justifyContent: 'center', marginTop: 22 }}>
-            <div className="cost-stat"><b>2/week</b><span>typical no-shows</span></div>
-            <div className="cost-stat"><b>$50+</b><span>lost per empty slot</span></div>
-            <div className="cost-stat"><b>-60%</b><span>drop with deposits</span></div>
+          <div className="cost-row">
+            <div className="cost-stat"><Icon name="lock" size={17} /> Deposit charged on no-show</div>
+            <div className="cost-stat"><Icon name="bell" size={17} /> Slot refilled from waitlist</div>
+            <div className="cost-stat"><Icon name="undo" size={17} /> Win-back texts to quiet clients</div>
           </div>
         </div>
       </section>
@@ -342,24 +380,18 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Testimonials — Fresha venue-card style */}
-      <section className="container">
-        <h2 className="section-title">Loved by studios across the US</h2>
-        <div className="grid3">
-          {TESTIMONIALS.map((t) => (
-            <div className="venue-card" key={t.name}>
-              <div className="venue-photo" style={{ background: t.grad }}><Icon name={t.icon} size={40} /></div>
-              <div className="venue-body">
-                <div className="row spread">
-                  <b>{t.name}</b>
-                  <span className="stars">{'★'.repeat(t.rating)}</span>
-                </div>
-                <div className="muted" style={{ fontSize: '0.85rem', marginBottom: 8 }}>📍 {t.city}</div>
-                <p style={{ fontSize: '0.92rem' }}>“{t.quote}”</p>
-              </div>
-            </div>
-          ))}
-        </div>
+      {/* Try it yourself — real live demo, not fabricated testimonials */}
+      <section className="container" style={{ textAlign: 'center' }}>
+        <span className="eyebrow">See it for real</span>
+        <h2 className="section-title" style={{ marginTop: 4 }}>We&apos;re early — try the real product instead of taking our word for it</h2>
+        <p className="muted" style={{ maxWidth: 620, margin: '0 auto 20px' }}>
+          ShowSure is new, so we&apos;d rather show you a real, working booking page than make up reviews.
+          This is a live demo salon — book a slot, cancel it, and watch the waitlist and reminders work
+          in real time.
+        </p>
+        <a href="https://frontend-swart-pi-29.vercel.app/s/bella-lash-nail-studio" target="_blank" rel="noopener noreferrer" className="btn btn-lg">
+          Try the live demo booking page
+        </a>
       </section>
 
       {/* Pricing */}

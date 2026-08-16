@@ -26,6 +26,8 @@ export default function Dashboard() {
   const [clients, setClients] = useState([]);
   const [waitlist, setWaitlist] = useState([]);
   const [error, setError] = useState('');
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsRange, setAnalyticsRange] = useState('30d');
 
   // Setup forms
   const [svc, setSvc] = useState({ name: '', duration_min: 60, price: 50 });
@@ -77,6 +79,11 @@ export default function Dashboard() {
     api('/clients', { auth: true }).then((d) => setClients(d.clients)).catch((e) => setError(e.message));
     api('/waitlist', { auth: true }).then((d) => setWaitlist(d.waitlist)).catch((e) => setError(e.message));
   }, [tab]);
+
+  useEffect(() => {
+    if (tab !== 'analytics') return;
+    api(`/analytics?range=${analyticsRange}`, { auth: true }).then(setAnalytics).catch((e) => setError(e.message));
+  }, [tab, analyticsRange]);
 
   useEffect(() => {
     if (tab !== 'setup') return;
@@ -201,7 +208,7 @@ export default function Dashboard() {
 
         {/* Tabs */}
         <div className="tabs">
-          {[['today', '📋 Today'], ['calendar', '🗓️ Calendar'], ['clients', '👥 Clients'], ['billing', '💎 Billing'], ['setup', '⚙️ Setup']].map(([k, label]) => (
+          {[['today', '📋 Today'], ['calendar', '🗓️ Calendar'], ['clients', '👥 Clients'], ['analytics', '📈 Analytics'], ['billing', '💎 Billing'], ['setup', '⚙️ Setup']].map(([k, label]) => (
             <button key={k} className={`tab ${tab === k ? 'sel' : ''}`} onClick={() => setTab(k)}>{label}</button>
           ))}
         </div>
@@ -370,6 +377,68 @@ export default function Dashboard() {
               </table>
             )}
           </div>
+          </>
+        )}
+
+        {/* ---- ANALYTICS ---- */}
+        {tab === 'analytics' && (
+          <>
+            <div className="row" style={{ marginBottom: 14 }}>
+              {[['7d', '7 days'], ['30d', '30 days'], ['90d', '90 days'], ['all', 'All time']].map(([k, label]) => (
+                <button
+                  key={k}
+                  className={`btn-sm ${analyticsRange === k ? '' : 'btn-secondary'}`}
+                  onClick={() => setAnalyticsRange(k)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {!analytics ? (
+              <p className="muted">Loading…</p>
+            ) : (
+              <>
+                <div className="row" style={{ marginBottom: 18 }}>
+                  <div className="stat"><span className="stat-icon"><Icon name="calendar" size={18} /></span><div className="num">{analytics.appointments_total}</div><div className="muted">Appointments</div></div>
+                  <div className="stat"><span className="stat-icon"><Icon name="dollar" size={18} /></span><div className="num">{fmtMoney(analytics.revenue_completed_cents)}</div><div className="muted">Revenue (completed)</div></div>
+                  <div className="stat"><span className="stat-icon"><Icon name="shield" size={18} /></span><div className="num">{analytics.no_show_rate === null ? '—' : `${analytics.no_show_rate}%`}</div><div className="muted">No-show rate</div></div>
+                  <div className="stat"><span className="stat-icon"><Icon name="lock" size={18} /></span><div className="num">{fmtMoney(analytics.deposits_captured_cents)}</div><div className="muted">Recovered from no-shows</div></div>
+                </div>
+
+                <div className="card">
+                  <h2>Revenue recovery activity</h2>
+                  <p className="muted" style={{ marginBottom: 12 }}>
+                    What ShowSure&apos;s automation actually did for you in this period — real numbers from your bookings.
+                  </p>
+                  <table>
+                    <tbody>
+                      <tr><td>No-shows prevented (deposit charged)</td><td><b>{analytics.deposits_captured_count}</b></td></tr>
+                      <tr><td>Clients joined the waitlist</td><td><b>{analytics.waitlist_joined}</b></td></tr>
+                      <tr><td>Waitlist clients notified of an opening</td><td><b>{analytics.waitlist_notified}</b></td></tr>
+                      <tr><td>Win-back texts sent to quiet clients</td><td><b>{analytics.reactivation_sent}</b></td></tr>
+                      <tr><td>Win-back texts that led to a rebooking (within 30 days)</td><td><b>{analytics.reactivation_rebooked}</b></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {analytics.per_staff?.length > 0 && (
+                  <div className="card">
+                    <h2>Per-staff performance</h2>
+                    <table>
+                      <thead><tr><th>Staff</th><th>Bookings</th><th>No-shows</th><th>Revenue</th></tr></thead>
+                      <tbody>
+                        {analytics.per_staff.map((s) => (
+                          <tr key={s.name}>
+                            <td>{s.name}</td><td>{s.bookings}</td><td>{s.no_shows}</td><td>{fmtMoney(s.revenue_cents)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
           </>
         )}
 
